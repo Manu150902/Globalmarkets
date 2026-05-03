@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Global Markets Clock</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="GlobalMarkets">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #0a0a0a; color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
+.app { max-width: 900px; margin: 0 auto; padding: 24px 16px; }
+.header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
+.logo { font-size: 18px; font-weight: 600; color: #fff; }
+.logo span { color: #4ade80; }
+.header-right { text-align: right; }
+.it-clock { font-size: 11px; color: #444; font-variant-numeric: tabular-nums; }
+.price-label { font-size: 10px; color: #333; margin-top: 2px; }
+.search-wrap { position: relative; margin-bottom: 28px; }
+.search-wrap input { width: 100%; background: #161616; border: 0.5px solid #2a2a2a; border-radius: 10px; padding: 10px 36px 10px 14px; color: #fff; font-size: 14px; outline: none; }
+.search-wrap input::placeholder { color: #555; }
+.search-wrap input:focus { border-color: #444; }
+.clr-btn { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #555; cursor: pointer; font-size: 16px; display: none; }
+.section-label { font-size: 11px; color: #555; letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 12px; margin-top: 24px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.card { background: #111; border: 0.5px solid #222; border-radius: 14px; padding: 18px; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+.card:hover { border-color: #333; background: #141414; }
+.card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+.card-abbr { font-size: 12px; color: #666; font-weight: 500; }
+.card-time { font-size: 36px; font-weight: 300; letter-spacing: -1px; color: #fff; margin-bottom: 6px; font-variant-numeric: tabular-nums; }
+.card-date { font-size: 11px; color: #555; margin-bottom: 12px; }
+.card-bottom { display: flex; align-items: center; justify-content: space-between; }
+.badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 500; padding: 4px 9px; border-radius: 20px; }
+.badge::before { content: ''; width: 5px; height: 5px; border-radius: 50%; display: inline-block; }
+.s-open { background: rgba(74,222,128,0.12); color: #4ade80; }
+.s-open::before { background: #4ade80; }
+.s-pre { background: rgba(251,191,36,0.12); color: #fbbf24; }
+.s-pre::before { background: #fbbf24; }
+.s-after { background: rgba(99,102,241,0.12); color: #818cf8; }
+.s-after::before { background: #818cf8; }
+.s-closed { background: rgba(255,255,255,0.06); color: #666; }
+.s-closed::before { background: #444; }
+.fav-btn { background: none; border: none; cursor: pointer; font-size: 15px; opacity: 0.4; transition: opacity 0.15s; padding: 2px 4px; line-height: 1; color: #fff; }
+.fav-btn:hover, .fav-btn.on { opacity: 1; }
+.pos { color: #4ade80; }
+.neg { color: #f87171; }
+.sim { font-size: 10px; color: #444; font-style: italic; margin-left: 3px; }
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 16px; }
+.modal { background: #111; border: 0.5px solid #2a2a2a; border-radius: 18px; width: 100%; max-width: 440px; padding: 28px; position: relative; max-height: 90vh; overflow-y: auto; }
+.modal-x { position: absolute; top: 16px; right: 16px; background: #1a1a1a; border: none; color: #888; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; }
+.modal-x:hover { color: #fff; }
+.modal-time { font-size: 48px; font-weight: 200; letter-spacing: -2px; color: #fff; margin: 14px 0 4px; font-variant-numeric: tabular-nums; }
+.hr { border: none; border-top: 0.5px solid #1e1e1e; margin: 18px 0; }
+.sched-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 9px; align-items: center; }
+.sl { font-size: 12px; color: #555; }
+.sc { font-size: 12px; color: #ccc; text-align: center; font-variant-numeric: tabular-nums; }
+.si { font-size: 12px; color: #818cf8; text-align: right; font-variant-numeric: tabular-nums; }
+.empty { text-align: center; padding: 48px 0; color: #444; font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="logo">Global<span>Markets</span></div>
+    <div class="header-right">
+      <div class="it-clock" id="it-clock"></div>
+      <div class="price-label" id="price-label">Caricamento prezzi...</div>
+    </div>
+  </div>
+  <div class="search-wrap">
+    <input type="text" id="q" placeholder="Cerca: Tokyo, NYSE, Nikkei, London...">
+    <button class="clr-btn" id="clr">x</button>
+  </div>
+  <div id="fav-section" style="display:none">
+    <div class="section-label">Preferiti</div>
+    <div class="grid" id="fav-grid"></div>
+  </div>
+  <div>
+    <div class="section-label" id="all-lbl">Tutte le borse</div>
+    <div class="grid" id="all-grid"></div>
+  </div>
+</div>
+<div class="overlay" id="overlay" style="display:none">
+  <div class="modal">
+    <button class="modal-x" id="modal-x">x</button>
+    <div id="modal-body"></div>
+  </div>
+</div>
+<script>
+var CURSYM = {USD:'$',EUR:'EUR',GBP:'GBP',JPY:'JPY',CNY:'CNY',HKD:'HKD',AUD:'AUD',CAD:'CAD',INR:'INR',KRW:'KRW',CHF:'CHF',SGD:'SGD',TWD:'TWD',BRL:'BRL',ZAR:'ZAR',RUB:'RUB',SAR:'SAR',AED:'AED'};
+var FSYM = {nyse:'^DJI',nasdaq:'^IXIC',lse:'^FTSE',enx:'^FCHI',bit:'^FTSEMIB.MI',fra:'^GDAXI',tsx:'^GSPTSE',tse:'^N225',hkex:'^HSI',sse:'000001.SS',szse:'399001.SZ',asx:'^AXJO',bse:'^BSESN',sgx:'^STI',krx:'^KS11',six:'^SSMI',moex:'IMOEX.ME',b3:'^BVSP',jse:'^J200.JO',tadawul:'^TASI.SR',dfm:'^DFMGI',twse:'^TWII'};
+var SL = {open:'Aperta',pre:'Pre-Market',after:'After Hours',closed:'Chiusa'};
+var SC = {open:'s-open',pre:'s-pre',after:'s-after',closed:'s-closed'};
+var M = [
+  {id:'nyse',   name:'New York Stock Exchange',    abbr:'NYSE',    tz:'America/New_York',    city:'New York',     index:'DJIA',          open:'09:30',close:'16:00',pre:'04:00',after:'20:00',cur:'USD',price:39842,chg:0.34,sim:true},
+  {id:'nasdaq', name:'NASDAQ',                     abbr:'NASDAQ',  tz:'America/New_York',    city:'New York',     index:'NASDAQ Comp.',   open:'09:30',close:'16:00',pre:'04:00',after:'20:00',cur:'USD',price:17923,chg:0.71,sim:true},
+  {id:'lse',    name:'London Stock Exchange',      abbr:'LSE',     tz:'Europe/London',       city:'Londra',       index:'FTSE 100',       open:'08:00',close:'16:30',pre:null,   after:null,   cur:'GBP',price:8192, chg:-0.12,sim:true},
+  {id:'enx',    name:'Euronext Paris',             abbr:'ENX',     tz:'Europe/Paris',        city:'Parigi',       index:'CAC 40',         open:'09:00',close:'17:30',pre:null,   after:null,   cur:'EUR',price:8247, chg:0.28,sim:true},
+  {id:'bit',    name:'Borsa Italiana',             abbr:'BIT',     tz:'Europe/Rome',         city:'Milano',       index:'FTSE MIB',       open:'09:00',close:'17:30',pre:null,   after:null,   cur:'EUR',price:36244,chg:0.51,sim:true},
+  {id:'fra',    name:'Borsa di Francoforte',       abbr:'XETRA',   tz:'Europe/Berlin',       city:'Francoforte',  index:'DAX 40',         open:'09:00',close:'17:30',pre:'08:00',after:'20:00',cur:'EUR',price:19832,chg:0.19,sim:true},
+  {id:'tsx',    name:'Toronto Stock Exchange',     abbr:'TSX',     tz:'America/Toronto',     city:'Toronto',      index:'S&P/TSX',        open:'09:30',close:'16:00',pre:null,   after:null,   cur:'CAD',price:22184,chg:-0.08,sim:true},
+  {id:'tse',    name:'Tokyo Stock Exchange',       abbr:'TSE',     tz:'Asia/Tokyo',          city:'Tokyo',        index:'Nikkei 225',     open:'09:00',close:'15:30',pre:null,   after:null,   cur:'JPY',price:38912,chg:1.02,sim:true},
+  {id:'hkex',   name:'Hong Kong Stock Exchange',   abbr:'HKEX',    tz:'Asia/Hong_Kong',      city:'Hong Kong',    index:'Hang Seng',      open:'09:30',close:'16:00',pre:null,   after:null,   cur:'HKD',price:17648,chg:-0.44,sim:true},
+  {id:'sse',    name:'Shanghai Stock Exchange',    abbr:'SSE',     tz:'Asia/Shanghai',       city:'Shanghai',     index:'SSE Composite',  open:'09:30',close:'15:00',pre:null,   after:null,   cur:'CNY',price:3312, chg:0.22,sim:true},
+  {id:'szse',   name:'Shenzhen Stock Exchange',    abbr:'SZSE',    tz:'Asia/Shanghai',       city:'Shenzhen',     index:'SZSE Component', open:'09:30',close:'15:00',pre:null,   after:null,   cur:'CNY',price:10923,chg:0.17,sim:true},
+  {id:'asx',    name:'Australian Securities Exchange',abbr:'ASX',  tz:'Australia/Sydney',    city:'Sydney',       index:'ASX 200',        open:'10:00',close:'16:00',pre:null,   after:null,   cur:'AUD',price:8024, chg:0.35,sim:true},
+  {id:'bse',    name:'Bombay Stock Exchange',      abbr:'BSE',     tz:'Asia/Kolkata',        city:'Mumbai',       index:'SENSEX',         open:'09:15',close:'15:30',pre:null,   after:null,   cur:'INR',price:73842,chg:0.55,sim:true},
+  {id:'sgx',    name:'Singapore Exchange',         abbr:'SGX',     tz:'Asia/Singapore',      city:'Singapore',    index:'STI',            open:'09:00',close:'17:00',pre:null,   after:null,   cur:'SGD',price:3421, chg:-0.09,sim:true},
+  {id:'krx',    name:'Korea Exchange',             abbr:'KRX',     tz:'Asia/Seoul',          city:'Seoul',        index:'KOSPI',          open:'09:00',close:'15:30',pre:null,   after:null,   cur:'KRW',price:2724, chg:0.63,sim:true},
+  {id:'six',    name:'SIX Swiss Exchange',         abbr:'SIX',     tz:'Europe/Zurich',       city:'Zurigo',       index:'SMI',            open:'09:00',close:'17:30',pre:null,   after:null,   cur:'CHF',price:12143,chg:0.10,sim:true},
+  {id:'moex',   name:'Borsa di Mosca',             abbr:'MOEX',    tz:'Europe/Moscow',       city:'Mosca',        index:'MOEX Russia',    open:'09:50',close:'18:50',pre:null,   after:null,   cur:'RUB',price:3241, chg:-0.21,sim:true},
+  {id:'b3',     name:'B3 Brasil Bolsa',            abbr:'B3',      tz:'America/Sao_Paulo',   city:'San Paolo',    index:'Ibovespa',       open:'10:00',close:'17:55',pre:null,   after:null,   cur:'BRL',price:128934,chg:0.82,sim:true},
+  {id:'jse',    name:'Johannesburg Stock Exchange',abbr:'JSE',     tz:'Africa/Johannesburg', city:'Johannesburg', index:'JSE Top 40',     open:'09:00',close:'17:00',pre:null,   after:null,   cur:'ZAR',price:80421,chg:0.14,sim:true},
+  {id:'tadawul',name:'Saudi Exchange',             abbr:'TADAWUL', tz:'Asia/Riyadh',         city:'Riad',         index:'TASI',           open:'10:00',close:'15:00',pre:null,   after:null,   cur:'SAR',price:12043,chg:0.44,sim:true},
+  {id:'dfm',    name:'Dubai Financial Market',     abbr:'DFM',     tz:'Asia/Dubai',          city:'Dubai',        index:'DFMGI',          open:'10:00',close:'14:00',pre:null,   after:null,   cur:'AED',price:4212, chg:-0.33,sim:true},
+  {id:'twse',   name:'Taiwan Stock Exchange',      abbr:'TWSE',    tz:'Asia/Taipei',         city:'Taipei',       index:'TAIEX',          open:'09:00',close:'13:30',pre:null,   after:null,   cur:'TWD',price:21432,chg:0.91,sim:true}
+];
+var favs=[];try{favs=JSON.parse(localStorage.getItem('gmcFavs')||'[]');}catch(e){favs=[];}
+var activeModal=null,lastFetch=0;
+function toMins(t){var p=t.split(':');return parseInt(p[0])*60+parseInt(p[1]);}
+function localTime(tz){return new Date().toLocaleString('it-IT',{timeZone:tz,hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});}
+function localDate(tz){return new Date().toLocaleDateString('it-IT',{timeZone:tz,weekday:'short',day:'numeric',month:'short'});}
+function tzInfo(tz){var parts=new Intl.DateTimeFormat('en-US',{timeZone:tz,hour:'numeric',minute:'numeric',weekday:'short',hour12:false}).formatToParts(new Date());var h=parseInt(parts.find(function(p){return p.type==='hour';}).value);var mn=parseInt(parts.find(function(p){return p.type==='minute';}).value);var wd=parts.find(function(p){return p.type==='weekday';}).value;return{mins:h*60+mn,isWeekend:wd==='Sat'||wd==='Sun'};}
+function getStatus(m){var info=tzInfo(m.tz);if(info.isWeekend)return 'closed';var o=toMins(m.open),c=toMins(m.close);if(info.mins>=o&&info.mins<c)return 'open';if(m.pre&&info.mins>=toMins(m.pre)&&info.mins<o)return 'pre';if(m.after&&info.mins>=c&&info.mins<toMins(m.after))return 'after';return 'closed';}
+function getOffset(tz,dt){var parts=new Intl.DateTimeFormat('en-US',{timeZone:tz,timeZoneName:'shortOffset'}).formatToParts(dt);var tzn=(parts.find(function(p){return p.type==='timeZoneName';})||{value:'GMT+0'}).value;var m=tzn.match(/GMT([+-])(\d+)(?::(\d+))?/);if(!m)return 0;return(m[1]==='+'?1:-1)*(parseInt(m[2])*60+(parseInt(m[3]||'0')));}
+function toIT(tz,timeStr){if(!timeStr)return null;var p=timeStr.split(':'),h=parseInt(p[0]),mn=parseInt(p[1]);var now=new Date(),ds=now.toLocaleDateString('en-CA',{timeZone:tz}),dp=ds.split('-');var ref=new Date(parseInt(dp[0]),parseInt(dp[1])-1,parseInt(dp[2]),h,mn,0);var diff=getOffset('Europe/Rome',ref)-getOffset(tz,ref);var rh=h+Math.floor(diff/60),rm=mn+(diff%60);if(rm<0){rh--;rm+=60;}if(rm>=60){rh++;rm-=60;}rh=((rh%24)+24)%24;return(rh<10?'0':'')+rh+':'+(rm<10?'0':'')+rm;}
+function matches(m,q){if(!q)return true;return[m.name,m.abbr,m.city,m.id,m.index,m.cur,m.tz].join(' ').toLowerCase().indexOf(q)!==-1;}
+function makeCard(m){var isFav=favs.indexOf(m.id)!==-1;var status=getStatus(m);var chgSign=m.chg>=0?'+':'';var chgCls=m.chg>=0?'pos':'neg';var sym=CURSYM[m.cur]||m.cur;var simTag=m.sim?'<span class="sim">simulato</span>':'';var d=document.createElement('div');d.className='card';d.dataset.id=m.id;d.innerHTML='<div class="card-top"><div class="card-abbr">'+m.abbr+' &middot; '+m.city+'</div><button class="fav-btn'+(isFav?' on':'')+'" data-fav="'+m.id+'">'+(isFav?'&#9733;':'&#9734;')+'</button></div><div class="card-time" data-time="'+m.id+'">'+localTime(m.tz)+'</div><div class="card-date">'+localDate(m.tz)+'</div><div class="card-bottom"><span class="badge '+SC[status]+'" data-status="'+m.id+'">'+SL[status]+'</span><span style="font-size:12px;color:#777;">'+sym+' '+m.price.toLocaleString('it-IT')+' <span class="'+chgCls+'">'+chgSign+m.chg.toFixed(2)+'%</span>'+simTag+'</span></div>';d.addEventListener('click',function(e){if(e.target.classList.contains('fav-btn')||e.target.dataset.fav){toggleFav(m.id);return;}openModal(m.id);});return d;}
+function render(){var q=document.getElementById('q').value.toLowerCase().trim();document.getElementById('clr').style.display=q?'block':'none';var visible=M.filter(function(m){return matches(m,q);});var favList=visible.filter(function(m){return favs.indexOf(m.id)!==-1;});var rest=visible.filter(function(m){return favs.indexOf(m.id)===-1;});var fg=document.getElementById('fav-grid'),ag=document.getElementById('all-grid');fg.innerHTML='';ag.innerHTML='';document.getElementById('fav-section').style.display=favList.length?'':'none';favList.forEach(function(m){fg.appendChild(makeCard(m));});document.getElementById('all-lbl').textContent=q?'Risultati':'Tutte le borse';if(!visible.length){ag.innerHTML='<div class="empty">Nessuna borsa trovata</div>';}else{rest.forEach(function(m){ag.appendChild(makeCard(m));});}}
+function toggleFav(id){var i=favs.indexOf(id);if(i!==-1)favs.splice(i,1);else favs.push(id);try{localStorage.setItem('gmcFavs',JSON.stringify(favs));}catch(e){}render();}
+function openModal(id){var m=M.find(function(x){return x.id===id;});if(!m)return;activeModal=id;var status=getStatus(m);var chgSign=m.chg>=0?'+':'';var chgCls=m.chg>=0?'pos':'neg';var rows=[['Mercato regolare',m.open,m.close]];if(m.pre)rows.push(['Pre-Market',m.pre,m.open]);if(m.after)rows.push(['After Hours',m.close,m.after]);var schedHTML='<div class="sched-row" style="margin-bottom:8px;"><span style="font-size:10px;color:#444;text-transform:uppercase;letter-spacing:.6px;">Sessione</span><span style="font-size:10px;color:#444;text-transform:uppercase;letter-spacing:.6px;text-align:center;">Ora locale</span><span style="font-size:10px;color:#555;text-transform:uppercase;letter-spacing:.6px;text-align:right;">Ora italiana</span></div>'+rows.map(function(r){return'<div class="sched-row"><span class="sl">'+r[0]+'</span><span class="sc">'+r[1]+' - '+r[2]+'</span><span class="si">'+toIT(m.tz,r[1])+' - '+toIT(m.tz,r[2])+'</span></div>';}).join('');var simNote=m.sim?'<div style="font-size:11px;color:#444;font-style:italic;margin-top:4px;">* Prezzo simulato</div>':'';document.getElementById('modal-body').innerHTML='<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;"><div><div style="font-size:17px;font-weight:500;">'+m.name+'</div><div style="font-size:12px;color:#555;">'+m.abbr+' &middot; '+m.cur+' &middot; '+m.city+'</div></div></div><div class="modal-time" id="m-time">'+localTime(m.tz)+'</div><div style="font-size:11px;color:#555;">'+localDate(m.tz)+' &middot; '+m.tz+'</div><div class="hr"></div><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;"><span style="font-size:13px;color:#555;">'+m.index+'</span><span style="font-size:21px;font-variant-numeric:tabular-nums;">'+m.price.toLocaleString('it-IT')+' <span class="'+chgCls+'" style="font-size:13px;">'+chgSign+m.chg.toFixed(2)+'%</span></span></div>'+simNote+'<div class="hr"></div>'+schedHTML+'<div class="hr"></div><div style="display:flex;justify-content:space-between;align-items:center;"><span class="badge '+SC[status]+'">'+SL[status]+'</span><span style="font-size:11px;color:#333;">Aggiornato in tempo reale</span></div>';document.getElementById('overlay').style.display='flex';}
+function closeModal(){document.getElementById('overlay').style.display='none';activeModal=null;}
+function fetchPrices(){var now=Date.now();if(now-lastFetch<5*60*1000)return;lastFetch=now;fetch('/.netlify/functions/prices').then(function(r){return r.json();}).then(function(data){if(!Array.isArray(data))throw new Error('not array');var updated=0;M.forEach(function(m){var sym=FSYM[m.id],found=null;for(var i=0;i<data.length;i++){if(data[i].symbol===sym){found=data[i];break;}}if(found&&found.price){m.price=found.price;m.chg=found.changesPercentage||0;m.sim=false;updated++;}else{m.sim=true;}});render();if(activeModal)openModal(activeModal);var t=new Date();document.getElementById('price-label').textContent='Prezzi: '+t.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})+' ('+updated+' live)';}).catch(function(){document.getElementById('price-label').textContent='Errore caricamento prezzi';});}
+document.getElementById('overlay').addEventListener('click',function(e){if(e.target===document.getElementById('overlay'))closeModal();});
+document.getElementById('modal-x').addEventListener('click',closeModal);
+document.getElementById('q').addEventListener('input',render);
+document.getElementById('clr').addEventListener('click',function(){document.getElementById('q').value='';render();});
+function tick(){var itNow=new Date().toLocaleString('it-IT',{timeZone:'Europe/Rome',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});document.getElementById('it-clock').textContent=itNow+' (IT)';document.querySelectorAll('[data-time]').forEach(function(el){var m=M.find(function(x){return x.id===el.dataset.time;});if(m)el.textContent=localTime(m.tz);});document.querySelectorAll('[data-status]').forEach(function(el){var m=M.find(function(x){return x.id===el.dataset.status;});if(m){var s=getStatus(m);el.textContent=SL[s];el.className='badge '+SC[s];}});if(activeModal){var mt=document.getElementById('m-time');var mm=M.find(function(x){return x.id===activeModal;});if(mt&&mm)mt.textContent=localTime(mm.tz);}}
+render();tick();fetchPrices();setInterval(tick,1000);setInterval(fetchPrices,5*60*1000);
+</script>
+</body>
+</html>
